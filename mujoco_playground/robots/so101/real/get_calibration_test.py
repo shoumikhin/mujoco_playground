@@ -47,8 +47,8 @@ class _ScriptedBus:
     self.frames = list(frames)
     self.reads = 0
 
-  def sync_read(self, register, motors, normalize=True):
-    assert register == "Present_Position" and not normalize
+  def sync_read(self, register, motors, normalize=True, num_retry=0):
+    assert register == "Present_Position" and not normalize and num_retry == 5
     frame = self.frames[self.reads]
     self.reads += 1
     return {name: frame[name] for name in motors}
@@ -65,7 +65,9 @@ class CaptureMiddleTest(absltest.TestCase):
       middle = get_calibration._capture_middle(bus)
 
     bus.set_half_turn_homings.assert_called_once()
-    bus.sync_read.assert_called_once_with("Present_Position", normalize=False)
+    bus.sync_read.assert_called_once_with(
+        "Present_Position", normalize=False, num_retry=5
+    )
     self.assertEqual(middle["shoulder_pan"], 2047)
 
 

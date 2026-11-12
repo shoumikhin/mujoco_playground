@@ -214,7 +214,7 @@ def _capture_middle(bus) -> Mapping[str, int]:
   """Sets the homing offset in EEPROM so the middle pose is centered at 2047."""
   input("Hold the pose and press ENTER to capture...")
   bus.set_half_turn_homings()
-  middle = bus.sync_read("Present_Position", normalize=False)
+  middle = bus.sync_read("Present_Position", normalize=False, num_retry=5)
   print("  captured: " + str(dict(middle)))
   return middle
 
@@ -225,11 +225,17 @@ def _record_ranges(
   """Interactively records each motor's range of motion until ENTER."""
   from lerobot.utils import utils as lerobot_utils  # pyrefly: ignore[missing-import]
 
-  positions = bus.sync_read("Present_Position", motor_names, normalize=False)
+  # lerobot 0.7 fails a read on one stray byte from the bus. Its own range
+  # recording retries reads five times, so do the same.
+  positions = bus.sync_read(
+      "Present_Position", motor_names, normalize=False, num_retry=5
+  )
   mins = {name: int(positions[name]) for name in motor_names}
   maxes = {name: int(positions[name]) for name in motor_names}
   while True:
-    positions = bus.sync_read("Present_Position", motor_names, normalize=False)
+    positions = bus.sync_read(
+        "Present_Position", motor_names, normalize=False, num_retry=5
+    )
     print("\n-------------------------------------------")
     print(f"{'NAME':<15} | {'MIN':>6} | {'POS':>6} | {'MAX':>6}")
     for name in motor_names:

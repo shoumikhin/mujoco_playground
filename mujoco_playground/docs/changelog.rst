@@ -5,6 +5,29 @@ MuJoCo Playground follows `MuJoCo's semantic versioning
 <https://github.com/google-deepmind/mujoco/blob/main/VERSIONING.md>`_
 (`SUPERMAJOR.MAJOR.MINOR_OR_PATCH`).
 
+Unreleased
+----------
+
+- PyTorch can now be 2.15 (``torch<2.16``), and the lock installs torch 2.15.0 (CUDA 13.2 runtime) and torchvision
+  0.29.2. The ``cu12`` group installs torch 2.13.0, the newest build on PyTorch's CUDA 12.9 index, and torchvision
+  0.28.0.
+- The locked torch 2.15 wheels for macOS need macOS 14 or newer on Apple Silicon. The torch 2.11 wheels ran on
+  macOS 11.
+- The ``feetech`` and ``so101`` extras now need lerobot 0.7 (``>=0.7.0,<0.8``), which drives the Feetech servos
+  through ``rustypot`` instead of ``feetech-servo-sdk``. It brings huggingface-hub 2, which needs click 8.4.2 or
+  newer, so ``click`` is overridden past i2rt's ``click<8.2.0`` pin.
+- SO-101 joint reads now retry twice, like lerobot's own SO-101 robot, and calibration retries five times, like
+  lerobot's own calibration, because lerobot 0.7 fails a read on one stray byte from the bus.
+- With the ``real`` extra (safari-sdk, which the hardware extras include) on Linux, a process that loads
+  TensorFlow 2.21 before Triton 3.7 or newer now crashes with an LLVM error. torch's TensorBoard ``SummaryWriter``
+  loads TensorFlow when it is installed. In your own scripts, load Triton first, inside ``try``/``except
+  ImportError`` because only Linux CUDA torch ships it. Playground's training code now does this.
+- The MCAP log reader and ``view_log`` decode messages with ``mcap_protobuf`` instead of TensorFlow. The ``real``
+  extra now declares ``mcap`` and ``mcap-protobuf-support``, which came only through safari-sdk before.
+  Breaking: ``iter_features`` yields the same ``(topic, features)`` pairs, but the feature values are now protobuf messages
+  built from the schema stored in the file, not TensorFlow ``Feature`` objects. They cannot be pickled or passed to
+  TensorFlow; convert them to NumPy first.
+
 Version 1.0.1 (November 8, 2026)
 --------------------------------
 

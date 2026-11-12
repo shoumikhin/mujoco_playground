@@ -15,9 +15,33 @@
 """Compute device and process rank helpers."""
 
 import dataclasses
+import importlib.util
 import os
+import sys
+import warnings
 
 import torch
+
+
+def load_triton() -> None:
+  """Loads Triton before code that loads TensorFlow.
+
+  TensorFlow 2.21 aborts the process if Triton loads after it. Only Linux CUDA
+  torch ships Triton. Importing Playground does not load it, so a script that
+  loaded TensorFlow first can still import Playground.
+  """
+  if "triton" in sys.modules or importlib.util.find_spec("triton") is None:
+    return
+  if "tensorflow" in sys.modules:
+    warnings.warn(
+        "TensorFlow is loaded, so Triton is not: loading it now would abort"
+        " the process. Anything that loads Triton later, like a policy"
+        " compiled for a CUDA GPU, aborts it too. Load Triton before"
+        " TensorFlow to use both.",
+        stacklevel=2,
+    )
+    return
+  import triton  # pyrefly: ignore[missing-import]  # pylint: disable=g-import-not-at-top,unused-import
 
 
 @dataclasses.dataclass(frozen=True)

@@ -331,6 +331,9 @@ def train(
     num_envs: int | None = None,
 ) -> tuple[dict[str, Any], epath.Path]:
   """Runs RL training for the specified env_id with an optional time limit."""
+  # The runner's TensorBoard writer and parse_tfevents can load TensorFlow,
+  # and the compiled policy needs Triton.
+  xpu.load_triton()
   from mujoco_playground._src.rl.rsl_rl import checkpoint
   from mujoco_playground._src.rl.rsl_rl import vecenv_wrapper
   from rsl_rl import runners as rsl_rl_runners

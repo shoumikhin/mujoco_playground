@@ -15,8 +15,11 @@
 """Test for train.py execution."""
 
 import os
+import sys
 import tempfile
+import types
 import unittest
+from unittest import mock
 
 from absl import flags
 from absl.testing import absltest
@@ -24,6 +27,35 @@ from absl.testing import flagsaver
 from absl.testing import parameterized
 from mujoco_playground.rl.rsl_rl import train
 import torch
+
+
+class LoggingWriterTest(absltest.TestCase):
+
+  def test_loads_triton_before_the_writers(self):
+    # The writers load TensorFlow, which aborts if Triton loads after it.
+    order = []
+
+    class _Module(types.ModuleType):
+
+      def __getattr__(self, name):
+        order.append(self.__name__)
+        return mock.MagicMock()
+
+    runner = mock.Mock(cfg={"logger": "tensorboard"}, remote_log_dir=None)
+    runner.logger.writer = None
+    runner.logger.disable_logs = False
+    runner.logger.log_dir = self.enterContext(tempfile.TemporaryDirectory())
+    with (
+        mock.patch.dict(
+            sys.modules,
+            {"clu": _Module("clu"), "tensorflow": _Module("tensorflow")},
+        ),
+        mock.patch.object(
+            train.xpu, "load_triton", side_effect=lambda: order.append("triton")
+        ),
+    ):
+      train.OnPolicyRunnerTB._prepare_logging_writer(runner)  # pylint: disable=protected-access
+    self.assertEqual(order[:2], ["triton", "clu"])
 
 
 @unittest.skipUnless(torch.cuda.is_available(), "Requires CUDA")

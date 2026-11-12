@@ -305,8 +305,11 @@ def read_joints(
     bus: FeetechMotorsBus, motor_calibration: Calibration
 ) -> Dict[str, float]:
   """The arm's pose in our units, read raw off the bus."""
+  # lerobot 0.7 fails a read on one stray byte from the bus. Its own SO-101
+  # robot retries reads twice, so do the same.
   return _raw_to_radians(
-      bus.sync_read("Present_Position", normalize=False), motor_calibration
+      bus.sync_read("Present_Position", normalize=False, num_retry=2),
+      motor_calibration,
   )
 
 

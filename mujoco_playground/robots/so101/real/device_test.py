@@ -44,8 +44,8 @@ class _FakeBus:
     self.positions = {name: _ZERO for name in constant.JOINTS}
     self.written: dict[str, int] | None = None
 
-  def sync_read(self, register, normalize=True):
-    assert register == "Present_Position" and not normalize
+  def sync_read(self, register, normalize=True, num_retry=0):
+    assert register == "Present_Position" and not normalize and num_retry == 2
     return dict(self.positions)
 
   def sync_write(self, register, values, normalize=True):

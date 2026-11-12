@@ -15,6 +15,9 @@
 """Tests for compute device resolution helpers."""
 
 import os
+import subprocess
+import sys
+import tempfile
 from unittest import mock
 
 from absl.testing import absltest
@@ -123,6 +126,57 @@ class XpuTest(parameterized.TestCase):
     xpu.configure_torch_backends()
     self.assertEqual(torch.get_float32_matmul_precision(), "high")
     self.assertTrue(torch.backends.cudnn.benchmark)
+
+  def _run_with_stubs(self, script: str, *stubs: str) -> int:
+    # Stubs stand in for Triton, which only Linux CUDA torch installs, and for
+    # TensorFlow. A fresh process keeps other tests from having loaded them.
+    with tempfile.TemporaryDirectory() as stub_dir:
+      for stub in stubs:
+        os.mkdir(os.path.join(stub_dir, stub))
+        open(os.path.join(stub_dir, stub, "__init__.py"), "w").close()
+      env = dict(os.environ)
+      env["PYTHONPATH"] = os.pathsep.join(
+          filter(None, [stub_dir, env.get("PYTHONPATH")])
+      )
+      return subprocess.run(
+          [sys.executable, "-c", script], env=env, check=False
+      ).returncode
+
+  def test_load_triton_loads_it_and_import_does_not(self) -> None:
+    returncode = self._run_with_stubs(
+        "import sys\n"
+        "from mujoco_playground._src import xpu\n"
+        "loaded_on_import = 'triton' in sys.modules\n"
+        "xpu.load_triton()\n"
+        "sys.exit(loaded_on_import or 'triton' not in sys.modules)\n",
+        "triton",
+    )
+    self.assertEqual(returncode, 0)
+
+  def test_importing_playground_does_not_load_triton(self) -> None:
+    # A script that loaded TensorFlow first would abort if it did.
+    returncode = self._run_with_stubs(
+        "import sys\n"
+        "import mujoco_playground.real\n"
+        "import mujoco_playground.rl\n"
+        "sys.exit('triton' in sys.modules)\n",
+        "triton",
+    )
+    self.assertEqual(returncode, 0)
+
+  def test_load_triton_warns_after_tensorflow(self) -> None:
+    returncode = self._run_with_stubs(
+        "import sys, warnings\n"
+        "import tensorflow\n"
+        "from mujoco_playground._src import xpu\n"
+        "with warnings.catch_warnings(record=True) as caught:\n"
+        "  warnings.simplefilter('always')\n"
+        "  xpu.load_triton()\n"
+        "sys.exit('triton' in sys.modules or len(caught) != 1)\n",
+        "triton",
+        "tensorflow",
+    )
+    self.assertEqual(returncode, 0)
 
 
 if __name__ == "__main__":

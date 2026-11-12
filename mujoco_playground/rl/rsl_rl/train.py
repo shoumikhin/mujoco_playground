@@ -133,6 +133,8 @@ class OnPolicyRunnerTB(rls_rl_runners.OnPolicyRunner):
         and self.logger.writer is None
         and not self.logger.disable_logs
     ):
+      # Both writers can load TensorFlow.
+      xpu.load_triton()
       try:
         from clu import metric_writers
         import tensorflow as tf  # pylint: disable=g-import-not-at-top
