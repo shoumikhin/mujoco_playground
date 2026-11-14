@@ -27,6 +27,8 @@ Unreleased
   Breaking: ``iter_features`` yields the same ``(topic, features)`` pairs, but the feature values are now protobuf messages
   built from the schema stored in the file, not TensorFlow ``Feature`` objects. They cannot be pickled or passed to
   TensorFlow; convert them to NumPy first.
+- The SO-101 deploy script now also parks the arm and releases torque after an error once the arm is set up, such
+  as a checkpoint that fails to load or a logger that fails to close.
 
 Version 1.0.1 (November 8, 2026)
 --------------------------------
